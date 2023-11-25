@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import {Component} from '@angular/core';
-import {NgIf, UpperCasePipe} from '@angular/common';
+import {NgIf, UpperCasePipe, NgForOf} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 
 interface ConversionResult {
@@ -8,78 +8,127 @@ interface ConversionResult {
   unit: string;
 }
 
+interface Option {
+  value: string;
+  label: string;
+}
+
+interface ConversionOptions {
+  [key: string]: ExtendedOption[];
+}
+
+export interface ExtendedOption extends Option {
+  factor?: number;
+  offset?: number;
+}
+
 @Component({
   standalone: true,
   selector: 'app-converter-form',
   templateUrl: './converter-form.component.html',
   styleUrls: ['./converter-form.component.css'],
-  imports: [FormsModule, NgIf, UpperCasePipe],
+  imports: [FormsModule, NgIf, NgForOf, UpperCasePipe],
 })
 
 export class ConverterFormComponent {
-  userInput: number = 0;
-  selectedConversionType: string = 'length';
-  selectedConversion: string = '';
-  result: ConversionResult = { value: 0, unit: '' };
 
-  constructor(public http: HttpClient) {}
+  userInputValue: number = 0;
+  result: number = 0;
+  conversionErrorMessage!: string;
+  fromOption: ExtendedOption | undefined;
+  toOption: ExtendedOption | undefined;
 
-  convert() {
-    const apiUrl = 'http://ec2-13-246-240-139.af-south-1.compute.amazonaws.com/converter';
+  options: Option[] = [
+    { value: "length", label: "Length" },
+    { value: "weight", label: "Weight" },
+    { value: "temperature", label: "Temperature" },
+  ];
 
-    switch (this.selectedConversionType) {
-      case 'length':
-        this.convertLength(apiUrl);
-        break;
-      case 'weight':
-        this.convertWeight(apiUrl);
-        break;
-      case 'temperature':
-        this.convertTemperature(apiUrl);
-        break;
-      default:
-        break;
+  conversionOptions: ConversionOptions = {
+    length: [
+      { value: "meters", label: "Meters", factor: 1 },
+      { value: "inches", label: "Inches", factor: 39.3701 },
+      { value: "centimeters", label: "Centimeters", factor: 100 },
+    ],
+    weight: [
+      { value: "kilograms", label: "Kilograms", factor: 1 },
+      { value: "pounds", label: "Pounds", factor: 2.20462 },
+      { value: "grams", label: "Grams", factor: 1000 },
+    ],
+    temperature: [
+      { value: "celsius", label: "Celsius", factor: 1 },
+      { value: "fahrenheit", label: "Fahrenheit", factor: 1.8, offset: 32 },
+      { value: "kelvin", label: "Kelvin", factor: 1, offset: 273.15 },
+    ],
+  };
+
+  selectedConversionType: string = this.options[0].value;
+  firstDropdownOptions!: Option[];
+  secondDropdownOptions!: Option[];
+  selectedFirstDropdownOption!: string;
+  selectedSecondDropdownOption!: string;
+
+  constructor() {
+    this.userInputValue = 0;
+  }
+
+  ngOnInit(): void {
+    this.onConversionTypeChange();
+  }
+
+  onConversionTypeChange(): void {
+    this.firstDropdownOptions = this.conversionOptions[this.selectedConversionType];
+    this.secondDropdownOptions = this.conversionOptions[this.selectedConversionType];;
+    this.selectedFirstDropdownOption = "";
+    this.selectedSecondDropdownOption = "";
+  }
+
+  onUserInputChanged(): void {
+    const stringValue = String(this.userInputValue).replace(/,/g, '.');
+    this.userInputValue = parseFloat(stringValue);
+
+    // Log the converted value
+    console.log('Converted value:', this.userInputValue);
+  }
+
+  convert(): void {
+
+    if (!this.selectedFirstDropdownOption || !this.selectedSecondDropdownOption) {
+      this.conversionErrorMessage = "Please select both 'Convert From' and 'Convert To' options.";
+      return;
     }
-  }
 
-  public convertLength(apiUrl: string) {
-    if (this.selectedConversion === 'to-imperial' || this.selectedConversion === 'to-metric') {
-      this.http.get<number>(`${apiUrl}/length-${this.selectedConversion}/${this.userInput}`)
-        .subscribe({
-          next: (response) => this.handleConversionResponse(response, ['feet', 'meters']),
-          error: (error) => this.handleConversionError(error),
-        });
+    this.conversionErrorMessage = "";
+
+    if (this.selectedConversionType === 'length') {
+      this.result = this.convertLength();
+    } else if (this.selectedConversionType === 'weight') {
+      this.result = this.convertWeight();
+    } else if (this.selectedConversionType === 'temperature') {
+      this.result = this.convertTemperature();
     }
+    
   }
 
-  public convertWeight(apiUrl: string) {
-    if (this.selectedConversion === 'to-imperial' || this.selectedConversion === 'to-metric') {
-      this.http.get<number>(`${apiUrl}/weight-${this.selectedConversion}/${this.userInput}`)
-        .subscribe({
-          next: (response) => this.handleConversionResponse(response, ['pounds', 'kilograms']),
-          error: (error) => this.handleConversionError(error),
-        });
-    }
+  private convertLength(): number {
+    const fromOption = this.getConversionOption(this.selectedFirstDropdownOption);
+    const toOption = this.getConversionOption(this.selectedSecondDropdownOption);
+    return (this.userInputValue * (toOption!.factor || 1)) / (fromOption!.factor || 1);
   }
-
-  public convertTemperature(apiUrl: string) {
-    if (this.selectedConversion === 'to-imperial' || this.selectedConversion === 'to-metric') {
-      this.http.get<number>(`${apiUrl}/temperature-${this.selectedConversion}/${this.userInput}`)
-        .subscribe({
-          next: (response) => this.handleConversionResponse(response, ['Fahrenheit', 'Celsius']),
-          error: (error) => this.handleConversionError(error),
-        });
-    }
+  
+  private convertWeight(): number {
+    const fromOption = this.getConversionOption(this.selectedFirstDropdownOption);
+    const toOption = this.getConversionOption(this.selectedSecondDropdownOption);
+    return (this.userInputValue * (toOption!.factor || 1)) / (fromOption!.factor || 1);
   }
-
-  public handleConversionResponse(response: number, units: [string, string]) {
-    this.result = {
-      value: +response.toFixed(2),
-      unit: this.selectedConversion === 'to-imperial' ? units[0] : units[1],
-    };
+  
+  private convertTemperature(): number {
+    const fromOption = this.getConversionOption(this.selectedFirstDropdownOption);
+    const toOption = this.getConversionOption(this.selectedSecondDropdownOption);
+    return (this.userInputValue - (fromOption!.offset || 0)) * (fromOption!.factor || 1) / (toOption!.factor || 1) + (toOption!.offset || 0);
   }
-
-  public handleConversionError(error: any) {
-    console.error('Conversion error:', error);
+  
+  private getConversionOption(value: string): ExtendedOption | undefined {
+    return this.conversionOptions[this.selectedConversionType].find(option => option.value === value);
   }
 }

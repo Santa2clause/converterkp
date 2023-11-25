@@ -1,59 +1,112 @@
 <style>
-    .converter-form {
-      max-width: 400px;
-      margin: auto;
-      padding: 20px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-  
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: 500;
-    }
-  
-    input, select, button {
-      width: 50%;
-      margin-bottom: 10px;
-      padding: 8px;
-    }
-  
-    button {
-      background-color: #007bff;
-      color: #fff;
-      cursor: pointer;
-    }
-  
-    button:hover {
-      background-color: #0056b3;
-    }
-  
-  </style>
+  .converter-form {
+  max-width: 400px;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
 
-<label>Select Conversion Type:</label>
-<select [(ngModel)]="selectedConversionType">
-    <option value="length">Length</option>
-    <option value="weight">Weight</option>
-    <option value="temperature">Temperature</option>
-</select>
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
 
-<label>Select Conversion:</label>
-<select [(ngModel)]="selectedConversion">
-    <option *ngIf="selectedConversionType === 'length'" value="to-imperial">To Imperial</option>
-    <option *ngIf="selectedConversionType === 'length'" value="to-metric">To Metric</option>
-    <option *ngIf="selectedConversionType === 'weight'" value="to-imperial">To Imperial</option>
-    <option *ngIf="selectedConversionType === 'weight'" value="to-metric">To Metric</option>
-    <option *ngIf="selectedConversionType === 'temperature'" value="to-imperial">To Imperial</option>
-    <option *ngIf="selectedConversionType === 'temperature'" value="to-metric">To Metric</option>
-</select>
+select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
 
-<label>Enter a Value:</label>
-<input type="number" [(ngModel)]="userInput" />
+.button-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-<button (click)="convert()">Convert</button>
+button {
+  width: 65%; 
+  padding: 10px;
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+}
 
-<div *ngIf="result !== undefined">
-  <p>Result: {{ result.value }} {{ result.unit }}</p>
+button:hover {
+  background-color: #0056b3;
+}
+
+.error-message {
+  color: #721c24; 
+  background-color: #f8d7da; 
+  border: 1px solid #f5c6cb;
+  padding: 8px; 
+  margin-top: 10px; 
+  border-radius: 4px; 
+}
+
+.result-message {
+  color: #155724; 
+  background-color: #d4edda; 
+  border: 1px solid #c3e6cb; 
+  padding: 8px; 
+  margin-top: 10px; 
+  border-radius: 4px; 
+}
+</style>
+
+<div class="converter-form">
+  <div class="dropdown-row">
+    <label>Select Conversion Type:</label>
+    <select [(ngModel)]="selectedConversionType" (change)="onConversionTypeChange()">
+      <option *ngFor="let option of options" [value]="option.value">{{ option.label }}</option>
+    </select>
+  </div>
+
+  <!-- First Row of Dropdowns -->
+  <div class="dropdown-row">
+    <label>Convert From:</label>
+    <select [(ngModel)]="selectedFirstDropdownOption" [disabled]="!firstDropdownOptions">
+      <option *ngFor="let option of firstDropdownOptions" [value]="option.value" [disabled]="selectedSecondDropdownOption === option.value">{{ option.label }}</option>
+    </select>
+  </div>
+
+  <!-- Second Row of Dropdowns -->
+  <div class="dropdown-row">
+    <label>Convert To:</label>
+    <select [(ngModel)]="selectedSecondDropdownOption" [disabled]="!selectedFirstDropdownOption">
+      <option *ngFor="let option of secondDropdownOptions" [value]="option.value" [disabled]="selectedFirstDropdownOption === option.value">
+        {{ option.label }}
+      </option>
+    </select>
+  </div>
+
+  <div class="dropdown-row">
+    <label>Enter Value:</label>
+    <input type="number" [(ngModel)]="userInputValue" />
+  </div>
+
+  <div *ngIf="conversionErrorMessage" class="error-message">
+    {{ conversionErrorMessage }}
+  </div>
+
+  <button type="button" (click)="convert()">Convert</button>
+
+  <div *ngIf="result !== null" class="result-message">
+    
+    <span *ngIf="selectedSecondDropdownOption">
+      {{ userInputValue }} {{ selectedFirstDropdownOption }} converted to {{ selectedSecondDropdownOption }} is:
+      <br/><br/>
+    </span>
+
+    Result: {{ result }}
+       
+  </div>
 </div>

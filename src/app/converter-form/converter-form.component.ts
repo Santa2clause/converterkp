@@ -48,9 +48,6 @@ export class ConverterFormComponent implements OnInit {
   onUserInputChanged(): void {
     const stringValue = String(this.userInputValue).replace(/,/g, '.');
     this.userInputValue = parseFloat(stringValue);
-
-    // Log the converted value
-    console.log('Converted value:', this.userInputValue);
   }
 
   convert(): void {
@@ -58,12 +55,24 @@ export class ConverterFormComponent implements OnInit {
       this.conversionErrorMessage = "Please select both 'Convert From' and 'Convert To' options.";
       return;
     }
-
+  
     this.conversionErrorMessage = '';
-
+  
     const fromOption = this.getConversionOption(this.selectedFirstDropdownOption);
     const toOption = this.getConversionOption(this.selectedSecondDropdownOption);
-
+  
+    // Check for negative values for length and weight conversions
+    if ((this.selectedConversionType === 'length' || this.selectedConversionType === 'weight') && this.userInputValue < 0) {
+      this.conversionErrorMessage = "Please enter a non-negative value for length and weight conversions.";
+      return;
+    }
+  
+    // Check for temperature below absolute zero
+    if (this.selectedConversionType === 'temperature' && this.userInputValue < -273.15) {
+      this.conversionErrorMessage = "Temperature below absolute zero is not allowed.";
+      return;
+    }
+  
     if (this.selectedConversionType === 'length') {
       this.result = this.converterService.convertLength(fromOption!, toOption!, this.userInputValue);
     } else if (this.selectedConversionType === 'weight') {
@@ -71,7 +80,7 @@ export class ConverterFormComponent implements OnInit {
     } else if (this.selectedConversionType === 'temperature') {
       this.result = this.converterService.convertTemperature(fromOption!, toOption!, this.userInputValue);
     }
-  }
+  }  
 
   private getConversionOption(value: string): ExtendedOption | undefined {
     const selectedConversionType = this.selectedConversionType;

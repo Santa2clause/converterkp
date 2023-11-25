@@ -1,26 +1,8 @@
-import { HttpClient } from '@angular/common/http';
-import {Component} from '@angular/core';
-import {NgIf, UpperCasePipe, NgForOf} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-
-interface ConversionResult {
-  value: number;
-  unit: string;
-}
-
-interface Option {
-  value: string;
-  label: string;
-}
-
-interface ConversionOptions {
-  [key: string]: ExtendedOption[];
-}
-
-export interface ExtendedOption extends Option {
-  factor?: number;
-  offset?: number;
-}
+import { Component, OnInit } from '@angular/core';
+import { ConverterFormService } from './converter-form.service';
+import { ExtendedOption, Option } from './converter-form.model';
+import { NgIf, UpperCasePipe, NgForOf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   standalone: true,
@@ -29,8 +11,7 @@ export interface ExtendedOption extends Option {
   styleUrls: ['./converter-form.component.css'],
   imports: [FormsModule, NgIf, NgForOf, UpperCasePipe],
 })
-
-export class ConverterFormComponent {
+export class ConverterFormComponent implements OnInit {
 
   userInputValue: number = 0;
   result: number = 0;
@@ -39,28 +20,10 @@ export class ConverterFormComponent {
   toOption: ExtendedOption | undefined;
 
   options: Option[] = [
-    { value: "length", label: "Length" },
-    { value: "weight", label: "Weight" },
-    { value: "temperature", label: "Temperature" },
+    { value: 'length', label: 'Length' },
+    { value: 'weight', label: 'Weight' },
+    { value: 'temperature', label: 'Temperature' },
   ];
-
-  conversionOptions: ConversionOptions = {
-    length: [
-      { value: "meters", label: "Meters", factor: 1 },
-      { value: "inches", label: "Inches", factor: 39.3701 },
-      { value: "centimeters", label: "Centimeters", factor: 100 },
-    ],
-    weight: [
-      { value: "kilograms", label: "Kilograms", factor: 1 },
-      { value: "pounds", label: "Pounds", factor: 2.20462 },
-      { value: "grams", label: "Grams", factor: 1000 },
-    ],
-    temperature: [
-      { value: "celsius", label: "Celsius", factor: 1 },
-      { value: "fahrenheit", label: "Fahrenheit", factor: 1.8, offset: 32 },
-      { value: "kelvin", label: "Kelvin", factor: 1, offset: 273.15 },
-    ],
-  };
 
   selectedConversionType: string = this.options[0].value;
   firstDropdownOptions!: Option[];
@@ -68,19 +31,18 @@ export class ConverterFormComponent {
   selectedFirstDropdownOption!: string;
   selectedSecondDropdownOption!: string;
 
-  constructor() {
-    this.userInputValue = 0;
-  }
+  constructor(private converterService: ConverterFormService) {}
 
   ngOnInit(): void {
     this.onConversionTypeChange();
   }
 
   onConversionTypeChange(): void {
-    this.firstDropdownOptions = this.conversionOptions[this.selectedConversionType];
-    this.secondDropdownOptions = this.conversionOptions[this.selectedConversionType];;
-    this.selectedFirstDropdownOption = "";
-    this.selectedSecondDropdownOption = "";
+    const options = this.converterService.getConversionOptions(this.selectedConversionType);
+    this.firstDropdownOptions = options || [];
+    this.secondDropdownOptions = options || [];
+    this.selectedFirstDropdownOption = '';
+    this.selectedSecondDropdownOption = '';
   }
 
   onUserInputChanged(): void {
@@ -92,43 +54,34 @@ export class ConverterFormComponent {
   }
 
   convert(): void {
-
     if (!this.selectedFirstDropdownOption || !this.selectedSecondDropdownOption) {
       this.conversionErrorMessage = "Please select both 'Convert From' and 'Convert To' options.";
       return;
     }
 
-    this.conversionErrorMessage = "";
+    this.conversionErrorMessage = '';
+
+    const fromOption = this.getConversionOption(this.selectedFirstDropdownOption);
+    const toOption = this.getConversionOption(this.selectedSecondDropdownOption);
 
     if (this.selectedConversionType === 'length') {
-      this.result = this.convertLength();
+      this.result = this.converterService.convertLength(fromOption!, toOption!, this.userInputValue);
     } else if (this.selectedConversionType === 'weight') {
-      this.result = this.convertWeight();
+      this.result = this.converterService.convertWeight(fromOption!, toOption!, this.userInputValue);
     } else if (this.selectedConversionType === 'temperature') {
-      this.result = this.convertTemperature();
+      this.result = this.converterService.convertTemperature(fromOption!, toOption!, this.userInputValue);
     }
-    
   }
 
-  private convertLength(): number {
-    const fromOption = this.getConversionOption(this.selectedFirstDropdownOption);
-    const toOption = this.getConversionOption(this.selectedSecondDropdownOption);
-    return (this.userInputValue * (toOption!.factor || 1)) / (fromOption!.factor || 1);
-  }
-  
-  private convertWeight(): number {
-    const fromOption = this.getConversionOption(this.selectedFirstDropdownOption);
-    const toOption = this.getConversionOption(this.selectedSecondDropdownOption);
-    return (this.userInputValue * (toOption!.factor || 1)) / (fromOption!.factor || 1);
-  }
-  
-  private convertTemperature(): number {
-    const fromOption = this.getConversionOption(this.selectedFirstDropdownOption);
-    const toOption = this.getConversionOption(this.selectedSecondDropdownOption);
-    return (this.userInputValue - (fromOption!.offset || 0)) * (fromOption!.factor || 1) / (toOption!.factor || 1) + (toOption!.offset || 0);
-  }
-  
   private getConversionOption(value: string): ExtendedOption | undefined {
-    return this.conversionOptions[this.selectedConversionType].find(option => option.value === value);
+    const selectedConversionType = this.selectedConversionType;
+  
+    if (selectedConversionType) {
+      const conversionOptions = this.converterService.getConversionOptions(selectedConversionType);
+      return conversionOptions!.find(option => option.value === value);
+    }
+  
+    return undefined;
   }
+  
 }

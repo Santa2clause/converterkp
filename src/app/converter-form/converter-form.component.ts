@@ -3,6 +3,7 @@ import { ConverterFormService } from './converter-form.service';
 import { ExtendedOption, Option } from './converter-form.model';
 import { NgIf, UpperCasePipe, NgForOf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   standalone: true,
@@ -11,10 +12,11 @@ import { FormsModule } from '@angular/forms';
   styleUrls: ['./converter-form.component.css'],
   imports: [FormsModule, NgIf, NgForOf, UpperCasePipe],
 })
+
 export class ConverterFormComponent implements OnInit {
 
   userInputValue: number = 0;
-  result: number = 0;
+  result!: number | null;
   conversionErrorMessage!: string;
   fromOption: ExtendedOption | undefined;
   toOption: ExtendedOption | undefined;
@@ -31,7 +33,10 @@ export class ConverterFormComponent implements OnInit {
   selectedFirstDropdownOption!: string;
   selectedSecondDropdownOption!: string;
 
-  constructor(private converterService: ConverterFormService) {}
+  constructor(
+    private converterService: ConverterFormService, 
+    public http: HttpClient
+  ) {}
 
   ngOnInit(): void {
     this.onConversionTypeChange();
@@ -50,6 +55,14 @@ export class ConverterFormComponent implements OnInit {
     this.userInputValue = parseFloat(stringValue);
   }
 
+  reset() {
+    this.selectedFirstDropdownOption = "";
+    this.selectedSecondDropdownOption = "";
+    this.userInputValue = 0;
+    this.result = 0;
+    this.conversionErrorMessage = "";
+  }
+  
   convert(): void {
     if (!this.selectedFirstDropdownOption || !this.selectedSecondDropdownOption) {
       this.conversionErrorMessage = "Please select both 'Convert From' and 'Convert To' options.";
@@ -61,25 +74,31 @@ export class ConverterFormComponent implements OnInit {
     const fromOption = this.getConversionOption(this.selectedFirstDropdownOption);
     const toOption = this.getConversionOption(this.selectedSecondDropdownOption);
   
-    // Check for negative values for length and weight conversions
     if ((this.selectedConversionType === 'length' || this.selectedConversionType === 'weight') && this.userInputValue < 0) {
       this.conversionErrorMessage = "Please enter a non-negative value for length and weight conversions.";
       return;
     }
   
-    // Check for temperature below absolute zero
     if (this.selectedConversionType === 'temperature' && this.userInputValue < -273.15) {
       this.conversionErrorMessage = "Temperature below absolute zero is not allowed.";
       return;
     }
   
-    if (this.selectedConversionType === 'length') {
-      this.result = this.converterService.convertLength(fromOption!, toOption!, this.userInputValue);
-    } else if (this.selectedConversionType === 'weight') {
-      this.result = this.converterService.convertWeight(fromOption!, toOption!, this.userInputValue);
-    } else if (this.selectedConversionType === 'temperature') {
-      this.result = this.converterService.convertTemperature(fromOption!, toOption!, this.userInputValue);
-    }
+    const conversionType = this.selectedConversionType.charAt(0).toUpperCase() + this.selectedConversionType.slice(1).toLowerCase();
+
+    this.converterService.convertUnit(fromOption!, toOption!, this.userInputValue, conversionType, this.http).subscribe(
+      result => {
+        if (result !== null) {
+          this.result = result;
+        } else {
+          this.conversionErrorMessage = `Oops! Something went wrong during the ${this.selectedConversionType} conversion.`;
+        }
+      },
+      error => {
+        console.error(`Error in ${this.selectedConversionType} conversion:`, error);
+        this.conversionErrorMessage = `Oops! Something went wrong during the ${this.selectedConversionType} conversion.`;
+      }
+    );
   }  
 
   private getConversionOption(value: string): ExtendedOption | undefined {

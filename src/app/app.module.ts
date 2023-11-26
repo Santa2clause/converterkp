@@ -8,8 +8,6 @@ import { ConverterFormComponent } from './converter-form/converter-form.componen
 
 @NgModule({
   declarations: [
-    AppComponent,
-    ConverterFormComponent
   ],
   imports: [
     BrowserModule,
@@ -17,6 +15,6 @@ import { ConverterFormComponent } from './converter-form/converter-form.componen
     HttpClientModule,
   ],
   providers: [],
-  bootstrap: [AppComponent]
+  bootstrap: []
 })
 export class AppModule { }

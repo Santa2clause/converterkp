@@ -70,7 +70,6 @@ button:hover {
     </select>
   </div>
 
-  <!-- First Row of Dropdowns -->
   <div class="dropdown-row">
     <label>Convert From:</label>
     <select [(ngModel)]="selectedFirstDropdownOption" [disabled]="!firstDropdownOptions">
@@ -78,7 +77,6 @@ button:hover {
     </select>
   </div>
 
-  <!-- Second Row of Dropdowns -->
   <div class="dropdown-row">
     <label>Convert To:</label>
     <select [(ngModel)]="selectedSecondDropdownOption" [disabled]="!selectedFirstDropdownOption">
@@ -97,16 +95,13 @@ button:hover {
     {{ conversionErrorMessage }}
   </div>
 
-  <button type="button" (click)="convert()">Convert</button>
-
-  <div *ngIf="result !== null" class="result-message">
-    
-    <span *ngIf="selectedSecondDropdownOption">
-      {{ userInputValue }} {{ selectedFirstDropdownOption }} converted to {{ selectedSecondDropdownOption }} is:
-      <br/><br/>
-    </span>
-
-    {{ result }}
-       
+  <div class="button-row">
+    <button type="button" (click)="convert()">Convert</button>
+    <button type="button" (click)="reset()">Reset</button>
   </div>
+
+  <div *ngIf="result !== null && !conversionErrorMessage && selectedSecondDropdownOption" class="result-message">
+    {{ userInputValue }} {{ selectedFirstDropdownOption }} converted is: {{ result }} {{ selectedSecondDropdownOption }}
+  </div>
+  
 </div>

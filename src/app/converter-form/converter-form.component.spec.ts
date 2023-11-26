@@ -23,6 +23,29 @@ describe('ConverterFormComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should display an error message when "Convert From" and "Convert To" options are not selected', () => {
+    component.convert();
+    expect(component.conversionErrorMessage).toEqual("Please select both 'Convert From' and 'Convert To' options.");
+  });
+
+  it('should display an error message when userInputValue is negative for length and weight conversions', () => {
+    component.selectedConversionType = 'length';
+    component.selectedFirstDropdownOption = 'Meters';
+    component.selectedSecondDropdownOption = 'Centimeters';
+    component.userInputValue = -10;
+    component.convert();
+    expect(component.conversionErrorMessage).toEqual('Please enter a non-negative value for length and weight conversions.');
+  });
+
+  it('should display an error message when userInputValue is below absolute zero for temperature conversions', () => {
+    component.selectedConversionType = 'temperature';
+    component.selectedFirstDropdownOption = 'Celsius';
+    component.selectedSecondDropdownOption = 'Fahrenheit';
+    component.userInputValue = -275;
+    component.convert();
+    expect(component.conversionErrorMessage).toEqual('Temperature below absolute zero is not allowed.');
+  });
+  
   it('should reset the form on reset() method call', () => {
     component.selectedConversionType = 'Length';
     component.selectedFirstDropdownOption = 'Meters';
